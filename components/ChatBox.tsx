@@ -231,7 +231,7 @@ export function ChatBox({ chatId }: { chatId?: string }) {
             )}
             <div
               className={`p-4 rounded-lg max-w-[70%] relative group ${
-                message.role === "user" ? "bg-purple-500" : "bg-gradient-to-br from-blue-500   to-purple-500"
+                message.role === "user" ? "bg-gradient-to-br from-indigo-800   to-pink-300" : "bg-gradient-to-br from-blue-500   to-purple-500"
               }`}
             >
               <div className="prose max-w-none">
