@@ -3,15 +3,17 @@ import mongoose from "mongoose";
 const UserSchema = new mongoose.Schema({
   name: String,
   email: { type: String, unique: true },
+  userDocuments: {
+    type: [String],
+    default: [],
+  },
   password: String,
   createdAt: { type: Date, default: Date.now },
 });
 
 const ChatSchema = new mongoose.Schema({
   title: String,
-  // userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  email: { type: String, unique: true },
-
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   createdAt: { type: Date, default: Date.now },
 });
 export interface IMessage {
@@ -57,9 +59,9 @@ const MessageSchema = new mongoose.Schema({
 });
 
 const FeedbackSchema = new mongoose.Schema({
-  rating: Number,
-  comment: String,
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+  // rating: Number,
+  // comment: String,
+  useremail: { type: String, required: true },
   messageId: { type: mongoose.Schema.Types.ObjectId, ref: "Message" },
   feedback: {
     referencedDocument: {

@@ -3,18 +3,18 @@
 //chatbox.tsx
 "use client";
 
-import { useState, useEffect, useRef, useTransition } from "react";
-import { useSession } from "next-auth/react";
-import { Textarea } from "@/components/ui/textarea";
-import { User, Bot, Copy, Check } from "lucide-react";
-import { motion } from "framer-motion";
-import { fetchMessages, savemessage, sendMessage } from "@/app/actions/chat";
-
-import ImageDialog from "./ImageDialog";
+import { fetchMessages, sendMessage } from "@/app/actions/chat";
+import FileInput from '@/components/FileInput';
 import { PaperAirplaneIcon } from '@heroicons/react/24/solid';
+import { motion } from "framer-motion";
+import { Bot, Check, Copy, User } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import ImageDialog from "./ImageDialog";
 
-import Spinner from "./ZoomingDot";
 import DocumentList from "./DocumentList";
+import FeedbackDialog from "./FeedbackDialog";
+import Spinner from "./ZoomingDot";
 interface ImageData {
   metadata: {
     description: string;
@@ -25,6 +25,7 @@ interface ImageData {
 }
 type Message = {
   id: string;
+  _id?:any,
   content: string;
   role: "user" | "assistant";
   imageData?: ImageData[];
@@ -50,7 +51,7 @@ const formatContent = (content: string) => {
     return <p key={index}>{line}</p>;
   });
 };
-
+ 
 export function ChatBox({ chatId }: { chatId?: string }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -61,7 +62,7 @@ export function ChatBox({ chatId }: { chatId?: string }) {
   const [isTyping, setIsTyping] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   useEffect(() => {
     if (chatId) {
       startTransition(async () => {
@@ -77,6 +78,15 @@ export function ChatBox({ chatId }: { chatId?: string }) {
       textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
     }
   }, [input]);
+
+  const handleFileSelect = (file: File | null) => {
+    setSelectedFile(file);
+    if (file) {
+      setInput(`Attached file: ${file.name}`);
+    } else {
+      setInput('');
+    }
+  };
 
   useEffect(() => {
     scrollToBottom();
@@ -231,7 +241,7 @@ export function ChatBox({ chatId }: { chatId?: string }) {
             )}
             <div
               className={`p-4 rounded-lg max-w-[70%] relative group ${
-                message.role === "user" ? "bg-gradient-to-br from-indigo-800   to-pink-300" : "bg-gradient-to-br from-blue-500   to-purple-500"
+                message.role === "user" ? "bg-gradient-to-br from-indigo-800   to-pink  -300" : "bg-gradient-to-br from-blue-500   to-purple-500"
               }`}
             >
               <div className="prose max-w-none">
@@ -244,7 +254,7 @@ export function ChatBox({ chatId }: { chatId?: string }) {
                     imageData={message.imageData}
                   />
                   <DocumentList Documents={message.Documents}/>
-</div>
+                    </div>
                 )}
               </div>
               <button
@@ -257,6 +267,9 @@ export function ChatBox({ chatId }: { chatId?: string }) {
                   <Copy size={16} />
                 )}
               </button>
+              <div className="absolute down-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <FeedbackDialog message_id={message._id}/>
+              </div>
             </div>
             {message.role === "user" && (
               <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center ">
@@ -278,13 +291,16 @@ export function ChatBox({ chatId }: { chatId?: string }) {
       </div>
       <form onSubmit={handleSubmit}>
         <div className="p-3 border-t border-purple-700">
-          <div className="flex items-center bg-white bg-opacity-10 backdrop-filter backdrop-blur-lg rounded-lg overflow-hidden shadow-lg">
-            <textarea
-              ref={textareaRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Type a message..."
-              className="flex-grow bg-transparent text-white px-6 py-4 focus:outline-none placeholder-purple-300 resize-none"
+        <div className="flex items-center bg-white bg-opacity-10 backdrop-filter backdrop-blur-lg rounded-lg overflow-hidden shadow-lg">
+  <div className="flex-shrink-0 pl-3 pr-2">
+    <FileInput onFileSelect={handleFileSelect} />
+  </div>
+  <textarea
+    ref={textareaRef}
+    value={input}
+    onChange={(e) => setInput(e.target.value)}
+    placeholder="Type a message..."
+    className="flex-grow bg-transparent text-white px-2 py-4 focus:outline-none placeholder-purple-300 resize-none"
               disabled={isLoading}
               rows={1}
               style={{ minHeight: '44px', maxHeight: '200px' }}
@@ -299,9 +315,9 @@ export function ChatBox({ chatId }: { chatId?: string }) {
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               onClick={handleSubmit}
-              disabled={!input.trim() || isLoading}
+              disabled={(!input.trim() && !selectedFile) || isLoading}
               className={`bg-purple-600 hover:bg-purple-700 text-white p-4 rounded-full transition duration-300 mr-1 ${
-                !input.trim() || isLoading ? 'opacity-50 cursor-not-allowed' : ''
+                (!input.trim() && !selectedFile) || isLoading ? 'opacity-50 cursor-not-allowed' : ''
               }`}
             >
               <PaperAirplaneIcon className="h-6 w-6" />

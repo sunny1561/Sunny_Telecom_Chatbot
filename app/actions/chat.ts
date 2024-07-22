@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { Chat, Message } from "@/models";
+import { Chat, Feedback, Message } from "@/models";
 import dbConnect from "@/lib/mongodb";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
@@ -13,7 +13,7 @@ export async function fetchChats(offset: number = 0, limit: number = 20) {
 
   await dbConnect();
 
-  const chats = await Chat.find({ email: session.user.email })
+  const chats = await Chat.find({ userId: session.user.id })
     .lean()
     .sort({ createdAt: -1 })
     .skip(offset)
@@ -34,6 +34,7 @@ export async function fetchMessages(chatId: string) {
   await dbConnect();
 
   const messages = await Message.find({ chatId }).sort({ createdAt: 1 }).lean();
+  console.log(messages);
 
   return JSON.stringify(messages);
 }
@@ -76,9 +77,12 @@ export async function savemessage({ chatId, content, query }: IfMessage) {
       chatId,
       content: `${content}`,
       role: "assistant",
-       
+      // Documents:procesdata.Documents,
+      // imageData:procesdata.imageData
     });
+    // revalidatePath(`/chat/${chatId}`);
     await userMessage.save(), await aiMessage.save();
+    // Save both messages simultaneously
 
     return "this is messsage from save message";
   } catch (error: unknown) {
@@ -108,7 +112,7 @@ export async function sendMessage({
   if (!chatId) {
     check = true;
     chat = await Chat.create({
-      email: session.user.email,
+      userId: session.user.id,
       title: content.slice(0, 50), // Use first 50 chars of message as chat title
     });
     chatId = chat.id;
@@ -143,3 +147,28 @@ export async function sendMessage({
   }
   return { userMessage, aiMessage };
 }
+
+//user feedback
+export const saveFeedback = async ({
+  messageId,
+  feedback,
+}: {
+  messageId: string;
+  feedback: any;
+}) => {
+  try {
+    const session = await auth();
+    if (!session) throw new Error("Unauthorized");
+
+    await dbConnect();
+    const newfeedback = await Feedback.create({
+      useremail: session.user.email,
+      messageId: messageId,
+      feedback: feedback,
+    });
+
+    return JSON.stringify(newfeedback);
+  } catch (error) {
+    throw new Error(JSON.stringify(error));
+  }
+};
