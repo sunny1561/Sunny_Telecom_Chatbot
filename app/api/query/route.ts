@@ -221,6 +221,7 @@
 
 
 // 
+import { NextRequest, NextResponse } from "next/server";
 import * as os from 'os';
 import * as random from 'random';
 import { QdrantClient } from '@qdrant/js-client-rest';
