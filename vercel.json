@@ -1,9 +1,5 @@
 {
-    "build": {
-    "env": {
-      "NODE_ENV": "production"
-    }
-  },
+   
     "headers": [
       {
         "source": "/api/(.*)",
