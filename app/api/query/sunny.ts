@@ -1,5 +1,6 @@
 
 import * as os from 'os';
+
 // import * as ProgressBar from 'cli-progress';
 import * as random from 'random';
 // import * as tf from '@tensorflow/tfjs-node-gpu';
@@ -457,7 +458,7 @@ async function generalQA(query: string): Promise<string> {
     const aiResponseContent = aiResponse.content.toString().trim().toLowerCase();
     // Instantiate GeneralQuestion with the LLM response
     const evaluation = new GeneralQuestion(aiResponseContent);
-   
+  
     // If the question is not telecom-related, ask the assistant to answer it directly
     if (evaluation.binary_score == "no") {
      
@@ -477,33 +478,6 @@ async function generalQA(query: string): Promise<string> {
     return  "Could not classify the response. Check LLM output." ;
   }
 }
-
-
-// async function runGraph(query: string, id: string): Promise<string> {
-//   const config = {
-//     configurable: { thread_id: id },
-//   };
-
-//   try {
-//     // Check if the query is telecom-related
-//     const qaResult = await generalQA(query); // Await the result of generalQA
-//     if (qaResult!== "yes") {
-//       return qaResult; // Return the response directly if not telecom-related
-//     }
-
-//     // Fetch memory state and invoke the app for telecom-related queries
-//     const memoryState = await app.getState(config);
-//     console.log(`State: ${JSON.stringify(memoryState)}`);
-
-//     const result = await app.invoke({ question: query }, config);
-
-//     // Return the processed result from the app
-//     return result.generation.substring(11),result.rel_image;
-//   } catch (error) {
-//     console.error("Error in runGraph function:", error);
-//     throw new Error("Failed to execute runGraph.");
-//   }
-// }
 async function runGraph(query: string, id: string): Promise<{ response: string; image: string | null }> {
   const config = {
     configurable: { thread_id: id },
@@ -532,19 +506,73 @@ async function runGraph(query: string, id: string): Promise<{ response: string; 
     throw new Error("Failed to execute runGraph.");
   }
 }
+function generateUniqueId(existingIds: Set<number>): number {
+  let randomId: number;
+  do {
+    randomId = Math.floor(Math.random() * 1000);
+  } while (existingIds.has(randomId));
+  existingIds.add(randomId);
+  return randomId;
+}
 
-// Error handling for unhandled promise rejections
-process.on("unhandledRejection", (error) => {
-  console.error("Unhandled promise rejection:", error);
-});
+const existingIds = new Set<number>();
 
-  // Corrected function call (await)
-  const q1 = "How does the RRC_INACTIVE state in the 5G NR state machine help optimize UE battery life while maintaining connection readiness?";
-  runGraph(q1, "1").then((result) => {
-    console.log(result.response,result.image);
-   
-  }).catch((error) => {
-    console.error("Error calling runGraph:", error);
+export async function POST(req: NextRequest) {
+  const body = await req.json();
+  const { question: query } = body;
+  const chat_history = body.chat_history;
+  console.log(chat_history);
+
+  if (!query) {
+    return NextResponse.json({ error: "Please provide a question" }, { status: 400 });
+  }
+
+  const encoder = new TextEncoder();
+  const stream = new TransformStream();
+  const writer = stream.writable.getWriter();
+
+  const sendUpdate = async (data: string) => {
+    await writer.write(encoder.encode(`data: ${JSON.stringify({ message: data })}\n\n`));
+  };
+
+  const processQuery = async () => {
+    try {
+      await sendUpdate("Initializing AI models...");
+      const id = generateUniqueId(existingIds);
+      const result = await runGraph(query, id.toString());
+
+      if (!result.response) {
+        return new Response();
+      }
+
+      const images = result.image;
+
+      await sendUpdate(
+        JSON.stringify({
+          documents: result.response,
+          imageData: images,
+          done: true,
+        })
+      );
+    } catch (error) {
+      console.error(error);
+      await sendUpdate(
+        JSON.stringify({
+          error: "An error occurred while processing your request.",
+        })
+      );
+    } finally {
+      writer.close();
+    }
+  };
+
+  processQuery();
+
+  return new Response(stream.readable, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+    },
   });
-
-  
+}
