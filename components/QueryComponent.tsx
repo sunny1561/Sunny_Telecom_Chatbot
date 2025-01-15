@@ -68,6 +68,69 @@ const QueryComponent: React.FC = () => {
 
 //     }
 //   };
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!query.trim()) return;
+
+    setIsLoading(true);
+    setChatHistory(prev => [...prev, { role: 'user', content: query }]);
+
+    try {
+      const response = await fetch('/api/query1', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          question: query,
+          chat_history: chatHistory.map(msg => msg.content),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to get response');
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('No reader available');
+
+      let assistantResponse = '';
+      setDocuments([]);
+      setImages([]);
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = new TextDecoder().decode(value);
+        const lines = chunk.split('\n\n');
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = JSON.parse(line.slice(6));
+            if (typeof data.message === 'string') {
+              assistantResponse += data.message;
+              updateChatHistory(assistantResponse);
+            } else if (data.message.documents) {
+              setDocuments(data.message.documents);
+            }
+            if (data.message.imageData) {
+              setImages(data.message.imageData);
+            }
+            if (data.message.done) {
+              setIsLoading(false);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error calling chat API:', error);
+      setIsLoading(false);
+    } finally {
+      setQuery('');
+      setIsLoading(false);
+
+    }
+  };
   const formatContent = (content: string) => {
     const lines = content.split('\n');
     return lines.map((line, index) => {
