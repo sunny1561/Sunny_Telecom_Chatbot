@@ -21,53 +21,53 @@ const QueryComponent: React.FC = () => {
     
   }, [chatHistory]);
 
-const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!query.trim()) return;
+// const handleSubmit = async (e: React.FormEvent) => {
+//     e.preventDefault();
+//     if (!query.trim()) return;
 
-    setIsLoading(true);
-    setChatHistory(prev => [...prev, { role: 'user', content: query }]);
+//     setIsLoading(true);
+//     setChatHistory(prev => [...prev, { role: 'user', content: query }]);
 
-    try {
-      const response = await fetch('http://localhost:3001/api/query1', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          query,
+//     try {
+//       const response = await fetch('http://localhost:3001/api/query1', {
+//         method: 'POST',
+//         headers: {
+//           'Content-Type': 'application/json',
+//         },
+//         body: JSON.stringify({
+//           query,
           
-        }),
-      });
+//         }),
+//       });
 
-      if (!response.ok) {
-        throw new Error('Failed to get response');
-      }
-      const data=await response.json();
-      console.log(data);
+//       if (!response.ok) {
+//         throw new Error('Failed to get response');
+//       }
+//       const data=await response.json();
+//       console.log(data);
       
-      if(data?.response){
-        updateChatHistory(data.response)
+//       if(data?.response){
+//         updateChatHistory(data.response)
         
-      }
-      if(data?.image){
-        setImages(data.image)
-      }
+//       }
+//       if(data?.image){
+//         setImages(data.image)
+//       }
 
      
 
     
 
      
-    } catch (error) {
-      console.error('Error calling chat API:', error);
-      setIsLoading(false);
-    } finally {
-      setQuery('');
-      setIsLoading(false);
+//     } catch (error) {
+//       console.error('Error calling chat API:', error);
+//       setIsLoading(false);
+//     } finally {
+//       setQuery('');
+//       setIsLoading(false);
 
-    }
-  };
+//     }
+//   };
   const formatContent = (content: string) => {
     const lines = content.split('\n');
     return lines.map((line, index) => {
